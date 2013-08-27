@@ -15,7 +15,9 @@ var shim = require('browserify-shim');
 
 module.exports = function (grunt) {
   grunt.registerMultiTask('browserify', 'Grunt task for browserify.', function () {
-    var opts = this.options();
+    var opts = this.options({
+      port: 10342
+    });
     var ctorOpts = {};
     var shims;
 
@@ -62,7 +64,7 @@ module.exports = function (grunt) {
           aliases = aliases.split(',');
         }
 
-        aliases = grunt.util._.flatten(aliases)
+        aliases = grunt.util._.flatten(aliases);
 
         aliases.forEach(function (alias) {
           alias = alias.split(':');
@@ -182,15 +184,33 @@ module.exports = function (grunt) {
         grunt.file.mkdir(destPath);
       }
 
-      b.bundle(opts, function (err, src) {
-        if (err) {
-          grunt.fail.warn(err);
-        }
+      if (opts.serveBundle) {
+        var http = require('http');
+        var requestListener = function (req, res) {
+            res.writeHead(200);
+            b.bundle(opts, function (err, src) {
+              if (err) {
+                grunt.fail.warn(err);
+              }
+              res.end(src);
+            });
+          };
 
-        grunt.file.write(file.dest, src);
-        grunt.log.ok('Bundled ' + file.dest);
-        next();
-      });
+        var server = http.createServer(requestListener);
+        server.listen(opts.port);
+      
+      }
+      else {
+        b.bundle(opts, function (err, src) {
+          if (err) {
+            grunt.fail.warn(err);
+          }
+
+          grunt.file.write(file.dest, src);
+          grunt.log.ok('Bundled ' + file.dest);
+          next();
+        });
+      }
 
     }, this.async());
   });

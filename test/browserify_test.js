@@ -3,6 +3,7 @@
 var grunt = require('grunt');
 var vm = require('vm');
 var browserify = require('browserify');
+var hyperquest = require('hyperquest');
 var jsdom = require('jsdom').jsdom;
 
 function readFile(path) {
@@ -59,6 +60,33 @@ module.exports = {
     test.ok(moduleExported(context, './fixtures/basic/b.js'));
 
     test.done();
+  },
+
+  onTheFly: function (test) {
+    test.expect(2);
+    var spawn = require('child_process').spawn;
+    var cp = spawn('grunt', ['browserify:onTheFlyBundle'], {cwd: ''});
+    
+    setTimeout(function () {
+      var bundleStream = hyperquest('http://localhost:8080/bundle.js');
+      var bundle = '';
+      bundleStream.on('data', function (data) {
+        bundle += data;
+      });
+      bundleStream.on('end', function (data) {
+        grunt.file.write('tmp/onTheFlyBundle.js', bundle);
+
+        var context = getIncludedModules('tmp/onTheFlyBundle.js');
+
+        test.ok(moduleExported(context, './fixtures/basic/a.js'));
+        test.ok(moduleExported(context, './fixtures/basic/b.js'));
+        cp.kill();
+
+        test.done();
+      });
+    }, 3000);
+    
+
   },
 
   ignores: function (test) {

@@ -20,6 +20,15 @@ module.exports = function (grunt) {
         dest: 'tmp/basic.js'
       },
 
+      onTheFlyBundle: {
+        src: ['test/fixtures/basic/*.js'],
+        dest: 'tmp/basic.js',
+        options: {
+          serveBundle: true,
+          port: 8080
+        }
+      },
+
       ignores: {
         src: ['test/fixtures/ignore/*.js'],
         dest: 'tmp/ignores.js',
@@ -134,7 +143,19 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-nodeunit');
 
+  function getTestTargets() {
+    var targetKeys = Object.keys(grunt.config('browserify'));
+    var optionsWithoutBundle = grunt.util._.without(targetKeys, 'onTheFlyBundle');
+
+    return ['clean']
+           .concat(optionsWithoutBundle.map(function (target) {
+              return 'browserify:' + target;
+            }))
+           .concat('nodeunit');
+  }
+
   // Default task.
-  grunt.registerTask('test', ['clean', 'browserify', 'nodeunit']);
+  grunt.registerTask('test', getTestTargets());
   grunt.registerTask('default', ['jshint', 'test']);
+
 };
